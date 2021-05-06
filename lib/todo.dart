@@ -17,9 +17,9 @@ class TodoListe extends StatefulWidget {
 class _TodoListeState extends State<TodoListe> {
   File jsonFile;
   Directory dir;
-  String filename = "lokalerSpeicher.json";
+  String filename = "lokalerSpeicher2.json";
   bool fileExists = false;
-  Map<String, List<dynamic>> jsonmap;
+  Map<String, dynamic> jsonmap;
 
   bool haken = false;
   String hakentext = "abgehakte Einträge ausblenden";
@@ -51,7 +51,7 @@ class _TodoListeState extends State<TodoListe> {
   List<DateTime> _todoDatenothakedarchived = [];
   List<int> _todonothakedarchivedindex = [];
 
-  File createFile(Map<String, List> content) {
+  File createFile(Map<String, dynamic> content) {
     File file;
     if (dir == null) {
       print('DEBUG: dir ist nicht definiert');
@@ -68,12 +68,13 @@ class _TodoListeState extends State<TodoListe> {
   void writeToFile() {
     print("Writing to File");
     if (_todoDate.length != 0) {
+      _todoDatets = [];
       for (int l = 0; l < _todoDate.length; l++) {
         _todoDatets.add(_todoDate[l].toString());
       }
     }
-    //jsonmap = {"Liste": _todoItems, "Datum": _todoDatets, "Img": _todoImg};
-    jsonmap = {"Liste": _todoItems, "Img": _todoImg};
+    jsonmap = {"Liste": _todoItems, "Datum": _todoDatets, "Img": _todoImg};
+    //jsonmap = {"Liste": _todoItems, "Img": _todoImg};
     if (fileExists) {
       print("File Exists");
       jsonFile.writeAsStringSync(jsonEncode(jsonmap));
@@ -93,9 +94,10 @@ class _TodoListeState extends State<TodoListe> {
         jsonFile = new File(dir.path + "/" + filename);
         fileExists = jsonFile.existsSync();
         if (fileExists) {
-          this.setState(
-              () => jsonmap = jsonDecode(jsonFile.readAsStringSync()));
-          _getItems();
+          setState(() {
+            jsonmap = jsonDecode(jsonFile.readAsStringSync());
+            _getItems();
+          });
         }
       });
     }
@@ -103,18 +105,23 @@ class _TodoListeState extends State<TodoListe> {
 
   _getItems() {
     if (jsonmap["Liste"] != [""]) {
-      List<String> _todoItemss = jsonmap["Liste"];
-      List<String> _todoDatetss = jsonmap["Datum"];
-      List<String> _todoImgs = jsonmap["Img"];
-      _todoDatets = _todoDatetss;
-      _todoItems = _todoItemss;
-      _todoImg = _todoImgs;
+      List<dynamic> _todoItemss = jsonmap["Liste"];
+      List<dynamic> _todoDatetss = jsonmap["Datum"];
+      List<dynamic> _todoImgs = jsonmap["Img"];
+      _todoDatets = _todoDatetss.cast<String>();
+      //_todoItems = _todoItemss.cast<String>();
+      //_todoImg = _todoImgs.cast<String>();
       print(_todoImgs);
       print(_todoItemss);
       print(_todoDatetss);
+      _todoDate = [];
+      _todoImg = [];
+      _todoItems = [];
 
       for (int l = 0; l < _todoDatets.length; l++) {
-        _todoDate[l] = DateTime.parse(_todoDatets[l]);
+        _todoImg.add(_todoImgs[l]);
+        _todoItems.add(_todoItemss[l]);
+        _todoDate.add(DateTime.parse(_todoDatets[l]));
       }
     }
   }
@@ -308,7 +315,6 @@ class _TodoListeState extends State<TodoListe> {
         _todoImg[index] = "assets/Images/Haken SK.png";
       }
       _sortall();
-      writeToFile();
     });
   }
 
@@ -415,7 +421,6 @@ class _TodoListeState extends State<TodoListe> {
     }
     //erstellt alle sortierten Listen
     _sortall();
-    writeToFile();
   }
 
   //lässt einen das Datum auswählen
@@ -547,6 +552,7 @@ class _TodoListeState extends State<TodoListe> {
 
   //erstellt/aktualisiert alle sortierten Listen
   _sortall() {
+    writeToFile();
     _hakensort();
     _archivsort();
     _archivhakensort();
@@ -572,7 +578,6 @@ class _TodoListeState extends State<TodoListe> {
             onTap: () {
               _archivbooltext();
               _sortall();
-              writeToFile();
             },
           ),
           SpeedDialChild(
@@ -581,7 +586,6 @@ class _TodoListeState extends State<TodoListe> {
             onTap: () {
               _sortall();
               _hakenbooltext();
-              writeToFile();
             },
           )
         ]));
