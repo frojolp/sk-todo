@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import "package:flutter_speed_dial/flutter_speed_dial.dart";
+import 'package:path_provider/path_provider.dart';
 
 class TodoListe extends StatefulWidget {
   @override
@@ -11,6 +15,12 @@ class TodoListe extends StatefulWidget {
 }
 
 class _TodoListeState extends State<TodoListe> {
+  File jsonFile;
+  Directory dir;
+  String filename = "lokalerSpeicher.json";
+  bool fileExists = false;
+  Map<String, List<dynamic>> jsonmap;
+
   bool haken = false;
   String hakentext = "abgehakte Einträge ausblenden";
 
@@ -21,6 +31,7 @@ class _TodoListeState extends State<TodoListe> {
   List<String> _todoItems = [];
   List<String> _todoImg = [];
   List<DateTime> _todoDate = [];
+  List<String> _todoDatets = [];
 
   // Liste nach nicht abgehackt sortiert
   List<String> _todoItemsnothaked = [];
@@ -39,6 +50,74 @@ class _TodoListeState extends State<TodoListe> {
   List<String> _todoImgnothakedarchived = [];
   List<DateTime> _todoDatenothakedarchived = [];
   List<int> _todonothakedarchivedindex = [];
+
+  File createFile(Map<String, List> content) {
+    File file;
+    if (dir == null) {
+      print('DEBUG: dir ist nicht definiert');
+      file = new File(filename);
+    } else {
+      file = new File(dir.path + "/" + filename);
+    }
+    file.createSync();
+    fileExists = true;
+    file.writeAsStringSync(jsonEncode(content));
+    return file;
+  }
+
+  void writeToFile() {
+    print("Writing to File");
+    if (_todoDate.length != 0) {
+      for (int l = 0; l < _todoDate.length; l++) {
+        _todoDatets.add(_todoDate[l].toString());
+      }
+    }
+    //jsonmap = {"Liste": _todoItems, "Datum": _todoDatets, "Img": _todoImg};
+    jsonmap = {"Liste": _todoItems, "Img": _todoImg};
+    if (fileExists) {
+      print("File Exists");
+      jsonFile.writeAsStringSync(jsonEncode(jsonmap));
+      print(jsonmap);
+    } else {
+      createFile(jsonmap);
+    }
+  }
+
+  void initState() {
+    super.initState();
+
+    if (!kIsWeb) {
+      //dir = await path_provider.getApplicationDocumentsDirectory();
+      getApplicationDocumentsDirectory().then((Directory directory) {
+        dir = directory;
+        jsonFile = new File(dir.path + "/" + filename);
+        fileExists = jsonFile.existsSync();
+        if (fileExists) {
+          this.setState(
+              () => jsonmap = jsonDecode(jsonFile.readAsStringSync()));
+          _getItems();
+        }
+      });
+    }
+  }
+
+  _getItems() {
+    if (jsonmap["Liste"] != [""]) {
+      List<String> _todoItemss = jsonmap["Liste"];
+      List<String> _todoDatetss = jsonmap["Datum"];
+      List<String> _todoImgs = jsonmap["Img"];
+      _todoDatets = _todoDatetss;
+      _todoItems = _todoItemss;
+      _todoImg = _todoImgs;
+      print(_todoImgs);
+      print(_todoItemss);
+      print(_todoDatetss);
+
+      for (int l = 0; l < _todoDatets.length; l++) {
+        _todoDate[l] = DateTime.parse(_todoDatets[l]);
+      }
+    }
+  }
 
   //erstellt den Körper der Liste
   Widget _erstelleTodoListe() {
@@ -229,6 +308,7 @@ class _TodoListeState extends State<TodoListe> {
         _todoImg[index] = "assets/Images/Haken SK.png";
       }
       _sortall();
+      writeToFile();
     });
   }
 
@@ -335,6 +415,7 @@ class _TodoListeState extends State<TodoListe> {
     }
     //erstellt alle sortierten Listen
     _sortall();
+    writeToFile();
   }
 
   //lässt einen das Datum auswählen
@@ -491,6 +572,7 @@ class _TodoListeState extends State<TodoListe> {
             onTap: () {
               _archivbooltext();
               _sortall();
+              writeToFile();
             },
           ),
           SpeedDialChild(
@@ -499,6 +581,7 @@ class _TodoListeState extends State<TodoListe> {
             onTap: () {
               _sortall();
               _hakenbooltext();
+              writeToFile();
             },
           )
         ]));
